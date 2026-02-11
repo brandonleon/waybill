@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Waybill manual - EVE Online hauling CLI powered by public ESI market data." />
+    <title>Waybill Manual</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Rajdhani:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --eve-black: #05070d;
+        --eve-blue: #0e1c2f;
+        --eve-steel: #131b2a;
+        --eve-gold: #f5b84c;
+        --eve-cyan: #5dd6ff;
+        --eve-slate: #8a99b3;
+        --eve-glow: rgba(93, 214, 255, 0.25);
+      }
+
+      body {
+        font-family: "Space Grotesk", "Helvetica Neue", sans-serif;
+        background: radial-gradient(circle at top, rgba(93, 214, 255, 0.12), transparent 45%),
+          linear-gradient(180deg, #05070d 0%, #0a1220 45%, #06080f 100%);
+        color: #e7edf7;
+        min-height: 100vh;
+      }
+
+      .scanline {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: repeating-linear-gradient(
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+        mix-blend-mode: soft-light;
+        opacity: 0.25;
+        z-index: 0;
+      }
+
+      .navbar {
+        backdrop-filter: blur(14px);
+        background: rgba(5, 7, 13, 0.9);
+        border-bottom: 1px solid rgba(93, 214, 255, 0.2);
+      }
+
+      .navbar-brand {
+        font-family: "Rajdhani", "Space Grotesk", sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        position: relative;
+        padding: 6rem 0 4.5rem;
+        z-index: 1;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 25% 25%, rgba(245, 184, 76, 0.18), transparent 55%);
+        z-index: -1;
+      }
+
+      .hero-title {
+        font-family: "Rajdhani", "Space Grotesk", sans-serif;
+        font-size: clamp(2.6rem, 3.6vw, 4rem);
+        letter-spacing: 0.08em;
+      }
+
+      .hero-tagline {
+        color: var(--eve-slate);
+        max-width: 36rem;
+      }
+
+      .panel {
+        background: rgba(14, 28, 47, 0.65);
+        border: 1px solid rgba(93, 214, 255, 0.2);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        border-radius: 1.2rem;
+        padding: 2rem;
+      }
+
+      .badge-eve {
+        border: 1px solid rgba(245, 184, 76, 0.4);
+        color: var(--eve-gold);
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.65rem;
+      }
+
+      .section-title {
+        font-family: "Rajdhani", "Space Grotesk", sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .info-card {
+        background: rgba(19, 27, 42, 0.9);
+        border: 1px solid rgba(93, 214, 255, 0.2);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        height: 100%;
+      }
+
+      .command-block {
+        background: #0a1220;
+        border: 1px solid rgba(93, 214, 255, 0.2);
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        font-family: "JetBrains Mono", "SFMono-Regular", monospace;
+        color: var(--eve-cyan);
+      }
+
+      .anchor-link {
+        color: var(--eve-cyan);
+        text-decoration: none;
+      }
+
+      .anchor-link:hover {
+        color: #ffffff;
+      }
+
+      .list-compact li {
+        margin-bottom: 0.45rem;
+      }
+
+      .footer {
+        border-top: 1px solid rgba(93, 214, 255, 0.2);
+        color: var(--eve-slate);
+        padding: 2.5rem 0;
+        font-size: 0.9rem;
+      }
+
+      .accent {
+        color: var(--eve-gold);
+      }
+
+      .glow {
+        box-shadow: 0 0 35px var(--eve-glow);
+      }
+
+      .pill {
+        border: 1px solid rgba(93, 214, 255, 0.25);
+        border-radius: 999px;
+        padding: 0.35rem 1rem;
+        font-size: 0.85rem;
+        color: var(--eve-slate);
+        background: rgba(8, 12, 20, 0.6);
+      }
+
+      @media (max-width: 767px) {
+        .hero {
+          padding-top: 4.5rem;
+        }
+
+        .panel {
+          padding: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scanline"></div>
+    <nav class="navbar navbar-expand-lg sticky-top navbar-dark">
+      <div class="container">
+        <a class="navbar-brand text-white" href="#top">Waybill</a>
+        <button
+          class="navbar-toggler text-white"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#nav"
+          aria-controls="nav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+          <ul class="navbar-nav ms-auto gap-3">
+            <li class="nav-item"><a class="nav-link text-white-50" href="#overview">Overview</a></li>
+            <li class="nav-item"><a class="nav-link text-white-50" href="#getting-started">Getting Started</a></li>
+            <li class="nav-item"><a class="nav-link text-white-50" href="#commands">Commands</a></li>
+            <li class="nav-item"><a class="nav-link text-white-50" href="#config">Config</a></li>
+            <li class="nav-item"><a class="nav-link text-white-50" href="#output">Output</a></li>
+            <li class="nav-item"><a class="nav-link text-white-50" href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container">
+          <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+              <span class="badge badge-eve">EVE Online Hauling Manual</span>
+              <h1 class="hero-title mt-3">Waybill: regional market intel for profitable hauling runs.</h1>
+              <p class="hero-tagline mt-3">
+                Waybill is a Python CLI that scans public ESI market orders, filters to your route, and ranks cargo by
+                net profit per cubic meter. Keep your hangar full and your jumps efficient.
+              </p>
+              <div class="d-flex flex-wrap gap-3 mt-4">
+                <span class="pill">No auth required</span>
+                <span class="pill">Regional market data</span>
+                <span class="pill">SQLite caching</span>
+              </div>
+            </div>
+            <div class="col-lg-5">
+              <div class="panel glow">
+                <p class="text-uppercase text-white-50 mb-2">Quick Start</p>
+                <div class="command-block">
+                  uv run waybill route \\
+                  --from-station "Hek VIII - Moon 12 - Boundless Creation Factory" \\
+                  --to-system "Aldik" \\
+                  --cargo-m3 60000 \\
+                  --min-profit 500000 \\
+                  --instant-only
+                </div>
+                <p class="text-white-50 mt-3 mb-0">Pulls regional orders, filters your route, returns top ISK/m³ runs.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="overview" class="py-5">
+        <div class="container">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <h2 class="section-title">Overview</h2>
+              <p class="text-white-50">
+                Waybill pulls regional market orders, narrows them to your stations or systems, computes net profit after
+                broker and tax fees, and ranks opportunities by ISK per cubic meter. It stores responses in SQLite so you
+                can iterate quickly without hammering ESI.
+              </p>
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <span class="pill">Profit ranking: ISK/m³</span>
+                <span class="pill">Detour hints supported</span>
+                <span class="pill">Public ESI endpoints</span>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h3 class="section-title h5">Requirements</h3>
+                <ul class="list-compact">
+                  <li>Python 3.12+</li>
+                  <li><span class="accent">uv</span> for virtualenv and dependency management</li>
+                  <li>Network access to ESI public endpoints</li>
+                </ul>
+                <p class="text-white-50 mb-0">
+                  Designed for capsuleers who want fast regional scans without authentication overhead or structure data.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="getting-started" class="py-5">
+        <div class="container">
+          <div class="row g-4">
+            <div class="col-lg-5">
+              <h2 class="section-title">Getting Started</h2>
+              <p class="text-white-50">
+                Waybill installs as a CLI entrypoint. Use <span class="accent">uv</span> to create a virtual environment
+                and install in editable mode.
+              </p>
+            </div>
+            <div class="col-lg-7">
+              <div class="panel">
+                <div class="command-block">
+                  uv venv
+                  uv pip install -e .
+                </div>
+                <div class="command-block mt-3">
+                  uv run waybill --help
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="commands" class="py-5">
+        <div class="container">
+          <h2 class="section-title mb-4">Commands</h2>
+          <div class="row g-4">
+            <div class="col-lg-4">
+              <div class="info-card">
+                <h3 class="h5">route</h3>
+                <p class="text-white-50">Find profitable hauling opportunities between systems or stations.</p>
+                <div class="command-block">
+                  uv run waybill route \\
+                  --from-system "Hek" \\
+                  --to-system "Aldik" \\
+                  --cargo-m3 60000 \\
+                  --min-profit 100000 \\
+                  --instant-only
+                </div>
+                <ul class="list-compact mt-3 text-white-50">
+                  <li>Ranks by ISK/m³ then liquidity.</li>
+                  <li>Supports off-route detour hints.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="info-card">
+                <h3 class="h5">best-sell</h3>
+                <p class="text-white-50">Scan the best stations to sell a specific item within a jump radius.</p>
+                <div class="command-block">
+                  uv run waybill best-sell \\
+                  --item "Tritanium" \\
+                  --from-system "Aldik" \\
+                  --max-jumps 5 \\
+                  --sec-band hi \\
+                  --instant-only
+                </div>
+                <ul class="list-compact mt-3 text-white-50">
+                  <li>Supports security filters or sec-band shortcuts.</li>
+                  <li>Outputs ISK/m³ and net price.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="info-card">
+                <h3 class="h5">sync-items</h3>
+                <p class="text-white-50">Refresh cached item metadata for known type IDs.</p>
+                <div class="command-block">
+                  uv run waybill sync-items --verbose
+                </div>
+                <ul class="list-compact mt-3 text-white-50">
+                  <li>Repeat <span class="accent">--region</span> to target specific regions.</li>
+                  <li>Use <span class="accent">--refresh</span> to override cache age.</li>
+                  <li><span class="accent">--limit</span> refreshes the oldest cached types first.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="options" class="py-5">
+        <div class="container">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <h2 class="section-title">Option Highlights</h2>
+              <ul class="list-compact text-white-50">
+                <li><span class="accent">--from-station</span> / <span class="accent">--from-system</span></li>
+                <li><span class="accent">--to-station</span> / <span class="accent">--to-system</span></li>
+                <li><span class="accent">--cargo-m3</span> and <span class="accent">--min-profit</span></li>
+                <li><span class="accent">--instant-only</span> for quick flips</li>
+                <li><span class="accent">--broker-fee</span> and <span class="accent">--sales-tax</span></li>
+                <li><span class="accent">--off-route-jumps</span> for detour scans</li>
+                <li><span class="accent">--market-cache-ttl</span> and <span class="accent">--refresh-market</span></li>
+                <li><span class="accent">--page-workers</span> for faster region pulls</li>
+              </ul>
+            </div>
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h3 class="section-title h5">Security Filters</h3>
+                <ul class="list-compact text-white-50">
+                  <li>Security status ranges from -1.0 (deep null) to 1.0 (high-sec).</li>
+                  <li>Use <span class="accent">--min-security</span> / <span class="accent">--max-security</span> for precision.</li>
+                  <li>Or use <span class="accent">--sec-band hi|low|null|all</span> as shorthand.</li>
+                  <li><span class="accent">--avoid-low</span> is an alias for <span class="accent">--min-security 0.5</span>.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="config" class="py-5">
+        <div class="container">
+          <div class="row g-4">
+            <div class="col-lg-5">
+              <h2 class="section-title">Config & Cache</h2>
+              <p class="text-white-50">
+                Waybill uses a local SQLite cache at <span class="accent">~/.cache/waybill/waybill.sqlite</span>. Cache
+                TTLs and item refresh behavior can be tuned with an optional config file.
+              </p>
+              <ul class="list-compact text-white-50">
+                <li>Default market cache TTL: 14,400 seconds (4 hours).</li>
+                <li>Cache status is printed even without <span class="accent">--verbose</span>.</li>
+                <li>Item type refresh runs after <span class="accent">route</span> and <span class="accent">best-sell</span>.</li>
+              </ul>
+            </div>
+            <div class="col-lg-7">
+              <div class="panel">
+                <div class="command-block">
+                  ~/.config/waybill/config.toml
+
+                  [item_type_refresh]
+                  oldest_limit = 10
+                  max_age_seconds = 0
+
+                  [market_cache]
+                  ttl_seconds = 14400
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="output" class="py-5">
+        <div class="container">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <h2 class="section-title">Output Columns</h2>
+              <div class="info-card">
+                <h3 class="h5">route</h3>
+                <ul class="list-compact text-white-50">
+                  <li>Item, Buy, Sell, Net Profit, ISK/m³, Qty, Total Volume</li>
+                  <li>Mode column appears when non-instant runs are included</li>
+                </ul>
+                <h3 class="h5 mt-4">best-sell</h3>
+                <ul class="list-compact text-white-50">
+                  <li>Station, System, Region, Jumps, Sec</li>
+                  <li>Net Price, ISK/m³, Volume, Mode</li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h3 class="h5">Off-route Table</h3>
+                <p class="text-white-50">
+                  When you set <span class="accent">--off-route-jumps</span>, Waybill prints an additional table that
+                  compares base net profit against detour opportunities.
+                </p>
+                <ul class="list-compact text-white-50">
+                  <li>Delta shows the extra profit from the detour.</li>
+                  <li>Detour indicates jumps off the shortest path.</li>
+                  <li>Station and system context are included for quick scouting.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="py-5">
+        <div class="container">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <h2 class="section-title">FAQ</h2>
+              <div class="info-card">
+                <h3 class="h6">Does Waybill use authentication?</h3>
+                <p class="text-white-50">No. Waybill uses public ESI endpoints, so it cannot see player structure data.</p>
+                <h3 class="h6 mt-4">Why does it fetch entire regions?</h3>
+                <p class="text-white-50">
+                  ESI market data is regional. Waybill pulls full regions then filters to your route so results are
+                  accurate.
+                </p>
+                <h3 class="h6 mt-4">How do I speed up scans?</h3>
+                <p class="text-white-50">
+                  Increase <span class="accent">--page-workers</span> or reuse cached data with a higher TTL.
+                </p>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="info-card">
+                <h3 class="h6">Limitations</h3>
+                <ul class="list-compact text-white-50">
+                  <li>No player structure data without authentication.</li>
+                  <li>Market pulls can be large; caching is recommended.</li>
+                  <li>Item type cache is lazy unless <span class="accent">sync-items</span> is run.</li>
+                </ul>
+                <h3 class="h6 mt-4">Performance Tips</h3>
+                <ul class="list-compact text-white-50">
+                  <li>Set <span class="accent">--market-cache-ttl 14400</span> or higher for repeated runs.</li>
+                  <li>Use <span class="accent">--page-workers 2</span> or <span class="accent">4</span> for large regions.</li>
+                  <li>Keep <span class="accent">--verbose</span> enabled for page-level progress.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container d-flex flex-column flex-md-row justify-content-between gap-3">
+        <div>
+          <strong class="text-white">Waybill</strong>
+          <div class="text-white-50">Hauling intelligence for the New Eden trade lanes.</div>
+        </div>
+        <div class="text-white-50">
+          Built for GitHub Pages. Update this manual in <span class="accent">docs/index.html</span>.
+        </div>
+      </div>
+    </footer>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
