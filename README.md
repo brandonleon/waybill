@@ -114,6 +114,9 @@ uv run waybill sync-items --refresh
 
 - Primary: ISK per m³ (net)
 - Secondary: liquidity (order volume at best price)
+- `--backhaul-mode` (alias `--backual-mode`) sorts by fill volume first, then net profit.
+- Quantity is limited by top-of-book volume at best price on each side.
+- Use `--min-cargo-fill-pct` to filter out low-volume/bait opportunities.
 
 ## CLI Options (Highlights)
 
@@ -122,8 +125,10 @@ uv run waybill sync-items --refresh
 - `--from-station` or `--from-system`
 - `--to-station` or `--to-system`
 - `--cargo-m3`
+- `--min-cargo-fill-pct` (minimum hold utilization per result row)
 - `--min-profit`
 - `--instant-only`
+- `--backhaul-mode` (alias `--backual-mode`)
 - `--broker-fee` (default 0.03)
 - `--sales-tax` (default 0.08)
 - `--limit` (default 20)

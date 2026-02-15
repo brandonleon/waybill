@@ -158,6 +158,8 @@ def compute_opportunities(
     broker_fee: float,
     sales_tax: float,
     min_profit: float,
+    min_cargo_fill_ratio: float,
+    backhaul_mode: bool,
     instant_only: bool,
 ) -> list[Opportunity]:
     """Compute ranked opportunities based on best-price orders."""
@@ -192,6 +194,10 @@ def compute_opportunities(
             quantity = min(max_units, sell_volume, buy_volume)
             if quantity <= 0:
                 continue
+            total_volume = quantity * item.volume
+            fill_ratio = total_volume / cargo_m3 if cargo_m3 > 0 else 0.0
+            if fill_ratio < min_cargo_fill_ratio:
+                continue
 
             gross_profit_per_unit = sell_price - buy_price
             net_sell_price = sell_price * (1.0 - broker_fee - sales_tax)
@@ -219,7 +225,7 @@ def compute_opportunities(
                     net_profit_total=net_profit_total,
                     isk_per_m3=isk_per_m3,
                     quantity=quantity,
-                    total_volume=quantity * item.volume,
+                    total_volume=total_volume,
                     liquidity=min(sell_volume, buy_volume),
                 )
             )
@@ -228,9 +234,20 @@ def compute_opportunities(
     if not instant_only:
         consider_pair(source_buys, destination_sells, "buy", "sell")
 
-    opportunities.sort(
-        key=lambda opp: (opp.isk_per_m3, opp.liquidity), reverse=True
-    )
+    if backhaul_mode:
+        opportunities.sort(
+            key=lambda opp: (
+                opp.total_volume,
+                opp.net_profit_total,
+                opp.isk_per_m3,
+                opp.liquidity,
+            ),
+            reverse=True,
+        )
+    else:
+        opportunities.sort(
+            key=lambda opp: (opp.isk_per_m3, opp.liquidity), reverse=True
+        )
     return opportunities
 
 

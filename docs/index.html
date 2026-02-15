@@ -313,11 +313,13 @@
                   --from-system "Hek" \\
                   --to-system "Aldik" \\
                   --cargo-m3 60000 \\
+                  --min-cargo-fill-pct 2 \\
                   --min-profit 100000 \\
-                  --instant-only
+                  --backual-mode
                 </div>
                 <ul class="list-compact mt-3 text-white-50">
-                  <li>Ranks by ISK/m³ then liquidity.</li>
+                  <li>Default ranking: ISK/m³ then liquidity.</li>
+                  <li>Backhaul ranking: fill volume, then net profit (<span class="accent">--backhaul-mode</span>).</li>
                   <li>Supports off-route detour hints.</li>
                 </ul>
               </div>
@@ -366,8 +368,9 @@
               <ul class="list-compact text-white-50">
                 <li><span class="accent">--from-station</span> / <span class="accent">--from-system</span></li>
                 <li><span class="accent">--to-station</span> / <span class="accent">--to-system</span></li>
-                <li><span class="accent">--cargo-m3</span> and <span class="accent">--min-profit</span></li>
+                <li><span class="accent">--cargo-m3</span>, <span class="accent">--min-cargo-fill-pct</span>, <span class="accent">--min-profit</span></li>
                 <li><span class="accent">--instant-only</span> for quick flips</li>
+                <li><span class="accent">--backhaul-mode</span> (alias <span class="accent">--backual-mode</span>) for fill-first sorting</li>
                 <li><span class="accent">--broker-fee</span> and <span class="accent">--sales-tax</span></li>
                 <li><span class="accent">--off-route-jumps</span> for detour scans</li>
                 <li><span class="accent">--market-cache-ttl</span> and <span class="accent">--refresh-market</span></li>
@@ -430,8 +433,8 @@
               <div class="info-card">
                 <h3 class="h5">route</h3>
                 <ul class="list-compact text-white-50">
-                  <li>Item, Buy, Sell, Net Profit, ISK/m³, Qty, Total Volume</li>
-                  <li>Mode column appears when non-instant runs are included</li>
+                  <li>Item, Source Price, Destination Price, Net Profit, ISK/m³, Fill %, Qty, Total Volume</li>
+                  <li>Mode appears on mixed runs: instant (sell-&gt;buy) or resting (buy-&gt;sell)</li>
                 </ul>
                 <h3 class="h5 mt-4">best-sell</h3>
                 <ul class="list-compact text-white-50">

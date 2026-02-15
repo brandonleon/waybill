@@ -63,6 +63,14 @@ def format_duration_elapsed(seconds: float) -> str:
     return f"{hours}h {remaining_minutes}m {remaining}s"
 
 
+def describe_route_mode(buy_order_type: str, sell_order_type: str) -> str:
+    if buy_order_type == "sell" and sell_order_type == "buy":
+        return "instant (sell->buy)"
+    if buy_order_type == "buy" and sell_order_type == "sell":
+        return "resting (buy->sell)"
+    return f"{buy_order_type}->{sell_order_type}"
+
+
 class Ansi:
     RESET = "\x1b[0m"
     BOLD = "\x1b[1m"
@@ -490,6 +498,11 @@ def route(
         None, "--to-system", help="Destination system name (all NPC stations included)"
     ),
     cargo_m3: float = typer.Option(..., "--cargo-m3", help="Cargo limit in m³"),
+    min_cargo_fill_pct: float = typer.Option(
+        0.0,
+        "--min-cargo-fill-pct",
+        help="Minimum cargo utilization per row as a percentage (0-100)",
+    ),
     min_profit: float = typer.Option(
         0.0, "--min-profit", help="Minimum total net profit (ISK)"
     ),
@@ -504,6 +517,13 @@ def route(
         False,
         "--instant-only",
         help="Only consider immediate orders (sell at source, buy at destination)",
+        is_flag=True,
+    ),
+    backhaul_mode: bool = typer.Option(
+        False,
+        "--backhaul-mode",
+        "--backual-mode",
+        help="Prioritize hold fill first (sort by total volume, then net profit)",
         is_flag=True,
     ),
     verbose: bool = typer.Option(
@@ -577,11 +597,13 @@ def route(
         to_station=to_station,
         to_system=to_system,
         cargo_m3=cargo_m3,
+        min_cargo_fill_pct=min_cargo_fill_pct,
         min_profit=min_profit,
         broker_fee=broker_fee,
         sales_tax=sales_tax,
         limit=limit,
         instant_only=instant_only,
+        backhaul_mode=backhaul_mode,
         verbose=verbose,
         quiet=quiet,
         no_preflight=no_preflight,
@@ -803,6 +825,9 @@ def run_find(args: SimpleNamespace) -> int:
     if args.off_route_jumps < 0:
         print("Error: --off-route-jumps must be >= 0.", file=sys.stderr)
         return 2
+    if args.min_cargo_fill_pct < 0.0 or args.min_cargo_fill_pct > 100.0:
+        print("Error: --min-cargo-fill-pct must be between 0 and 100.", file=sys.stderr)
+        return 2
 
     log(f"Source stations: {len(source_stations)}")
     log(f"Destination stations: {len(destination_stations)}")
@@ -937,6 +962,8 @@ def run_find(args: SimpleNamespace) -> int:
         broker_fee=args.broker_fee,
         sales_tax=args.sales_tax,
         min_profit=args.min_profit,
+        min_cargo_fill_ratio=args.min_cargo_fill_pct / 100.0,
+        backhaul_mode=args.backhaul_mode,
         instant_only=args.instant_only,
     )
 
@@ -954,14 +981,18 @@ def run_find(args: SimpleNamespace) -> int:
     show_mode = not args.instant_only
     top_opps = opportunities[: args.limit]
     rows = []
+    has_resting_mode = False
     for opp in top_opps:
-        mode = f"{opp.buy_order_type}->{opp.sell_order_type}"
+        mode = describe_route_mode(opp.buy_order_type, opp.sell_order_type)
+        if opp.buy_order_type == "buy" and opp.sell_order_type == "sell":
+            has_resting_mode = True
         row = [
             opp.item_name,
             format_isk(opp.buy_price),
             format_isk(opp.sell_price),
             format_isk(opp.net_profit_total),
             format_isk(opp.isk_per_m3),
+            f"{(opp.total_volume / args.cargo_m3 * 100.0):.2f}%",
             str(opp.quantity),
             format_volume(opp.total_volume),
         ]
@@ -971,10 +1002,11 @@ def run_find(args: SimpleNamespace) -> int:
 
     headers = [
         "Item",
-        "Buy",
-        "Sell",
+        "Source Price",
+        "Destination Price",
         "Net Profit",
         "ISK/m³",
+        "Fill %",
         "Qty",
         "Total Volume",
     ]
@@ -986,6 +1018,16 @@ def run_find(args: SimpleNamespace) -> int:
         print_section_break(sys.stdout, show_preflight or show_live or show_summary)
         table = render_table(headers, rows)
         print(table)
+        if args.min_cargo_fill_pct > 0:
+            print(f"Filter: minimum cargo fill {args.min_cargo_fill_pct:.2f}%.")
+        if args.backhaul_mode:
+            print("Sort: backhaul mode (Fill volume -> Net Profit -> ISK/m³).")
+        if show_mode and has_resting_mode:
+            print(
+                "Legend: instant = immediate fills (source sell -> destination buy). "
+                "resting = you place orders and wait (source buy -> destination sell). "
+                "Use --instant-only for immediate routes only."
+            )
 
     if show_output and args.off_route_jumps > 0 and top_opps:
         off_route_rows: list[list[str]] = []
@@ -1089,7 +1131,7 @@ def run_find(args: SimpleNamespace) -> int:
                 return info
 
         for opp in top_opps:
-            mode = f"{opp.buy_order_type}->{opp.sell_order_type}"
+            mode = describe_route_mode(opp.buy_order_type, opp.sell_order_type)
             base_net = opp.net_profit_total
             off_net = None
             delta = None
