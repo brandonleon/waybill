@@ -518,14 +518,12 @@ def route(
         False,
         "--instant-only",
         help="Only consider immediate orders (sell at source, buy at destination)",
-       ,
     ),
     backhaul_mode: bool = typer.Option(
         False,
         "--backhaul-mode",
         "--backual-mode",
         help="Prioritize hold fill first (sort by total volume, then net profit)",
-       ,
     ),
     verbose: bool = typer.Option(
         False, "--verbose", help="Print progress information while fetching data"
@@ -534,7 +532,6 @@ def route(
         False,
         "--quiet",
         help="Hide preflight, live fetch, and summary output",
-       ,
     ),
     no_preflight: bool = typer.Option(
         False, "--no-preflight", help="Hide cache preflight section"
@@ -552,7 +549,6 @@ def route(
         False,
         "--allow-structures",
         help="Allow station name resolution to match player structures",
-       ,
     ),
     cache_db: str = typer.Option(
         "~/.cache/waybill/waybill.sqlite",
@@ -568,7 +564,6 @@ def route(
         False,
         "--refresh-market",
         help="Force refresh market orders (ignore cache)",
-       ,
     ),
     page_workers: int = typer.Option(
         1, "--page-workers", help="Parallel workers for fetching region pages"
@@ -660,7 +655,6 @@ def best_sell(
         False,
         "--quiet",
         help="Hide preflight, live fetch, and summary output",
-       ,
     ),
     no_preflight: bool = typer.Option(
         False, "--no-preflight", help="Hide cache preflight section"
@@ -688,7 +682,6 @@ def best_sell(
         False,
         "--refresh-market",
         help="Force refresh market orders (ignore cache)",
-       ,
     ),
     page_workers: int = typer.Option(
         1, "--page-workers", help="Parallel workers for fetching region pages"
