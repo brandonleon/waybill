@@ -24,6 +24,7 @@ from .market import (
     systems_within_jumps,
     systems_within_route_jumps,
 )
+from .mcp_server import create_server
 
 
 def format_isk(value: float) -> str:
@@ -517,41 +518,41 @@ def route(
         False,
         "--instant-only",
         help="Only consider immediate orders (sell at source, buy at destination)",
-        is_flag=True,
+       ,
     ),
     backhaul_mode: bool = typer.Option(
         False,
         "--backhaul-mode",
         "--backual-mode",
         help="Prioritize hold fill first (sort by total volume, then net profit)",
-        is_flag=True,
+       ,
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", help="Print progress information while fetching data", is_flag=True
+        False, "--verbose", help="Print progress information while fetching data"
     ),
     quiet: bool = typer.Option(
         False,
         "--quiet",
         help="Hide preflight, live fetch, and summary output",
-        is_flag=True,
+       ,
     ),
     no_preflight: bool = typer.Option(
-        False, "--no-preflight", help="Hide cache preflight section", is_flag=True
+        False, "--no-preflight", help="Hide cache preflight section"
     ),
     no_live: bool = typer.Option(
-        False, "--no-live", help="Hide live fetch status output", is_flag=True
+        False, "--no-live", help="Hide live fetch status output"
     ),
     no_summary: bool = typer.Option(
-        False, "--no-summary", help="Hide total elapsed summary line", is_flag=True
+        False, "--no-summary", help="Hide total elapsed summary line"
     ),
     no_output: bool = typer.Option(
-        False, "--no-output", help="Hide final results output", is_flag=True
+        False, "--no-output", help="Hide final results output"
     ),
     allow_structures: bool = typer.Option(
         False,
         "--allow-structures",
         help="Allow station name resolution to match player structures",
-        is_flag=True,
+       ,
     ),
     cache_db: str = typer.Option(
         "~/.cache/waybill/waybill.sqlite",
@@ -567,7 +568,7 @@ def route(
         False,
         "--refresh-market",
         help="Force refresh market orders (ignore cache)",
-        is_flag=True,
+       ,
     ),
     page_workers: int = typer.Option(
         1, "--page-workers", help="Parallel workers for fetching region pages"
@@ -640,10 +641,10 @@ def best_sell(
         case_sensitive=False,
     ),
     avoid_low: bool = typer.Option(
-        False, "--avoid-low", help="Alias for --min-security 0.5 (high-sec only)", is_flag=True
+        False, "--avoid-low", help="Alias for --min-security 0.5 (high-sec only)"
     ),
     instant_only: bool = typer.Option(
-        False, "--instant-only", help="Only consider immediate sell to buy orders", is_flag=True
+        False, "--instant-only", help="Only consider immediate sell to buy orders"
     ),
     limit: int = typer.Option(10, "--limit", help="Number of rows to display"),
     broker_fee: float = typer.Option(
@@ -653,25 +654,25 @@ def best_sell(
         0.08, "--sales-tax", help="Sales tax rate (e.g. 0.08 for 8%)"
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", help="Print progress information while fetching data", is_flag=True
+        False, "--verbose", help="Print progress information while fetching data"
     ),
     quiet: bool = typer.Option(
         False,
         "--quiet",
         help="Hide preflight, live fetch, and summary output",
-        is_flag=True,
+       ,
     ),
     no_preflight: bool = typer.Option(
-        False, "--no-preflight", help="Hide cache preflight section", is_flag=True
+        False, "--no-preflight", help="Hide cache preflight section"
     ),
     no_live: bool = typer.Option(
-        False, "--no-live", help="Hide live fetch status output", is_flag=True
+        False, "--no-live", help="Hide live fetch status output"
     ),
     no_summary: bool = typer.Option(
-        False, "--no-summary", help="Hide total elapsed summary line", is_flag=True
+        False, "--no-summary", help="Hide total elapsed summary line"
     ),
     no_output: bool = typer.Option(
-        False, "--no-output", help="Hide final results output", is_flag=True
+        False, "--no-output", help="Hide final results output"
     ),
     cache_db: str = typer.Option(
         "~/.cache/waybill/waybill.sqlite",
@@ -687,7 +688,7 @@ def best_sell(
         False,
         "--refresh-market",
         help="Force refresh market orders (ignore cache)",
-        is_flag=True,
+       ,
     ),
     page_workers: int = typer.Option(
         1, "--page-workers", help="Parallel workers for fetching region pages"
@@ -729,7 +730,7 @@ def sync_items(
         help="Limit to a specific region_id (can be used multiple times)",
     ),
     refresh: bool = typer.Option(
-        False, "--refresh", help="Refetch type info even if already cached", is_flag=True
+        False, "--refresh", help="Refetch type info even if already cached"
     ),
     limit: int = typer.Option(
         0,
@@ -740,19 +741,19 @@ def sync_items(
         2, "--type-workers", help="Parallel workers for fetching type info"
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", help="Print progress information while fetching data", is_flag=True
+        False, "--verbose", help="Print progress information while fetching data"
     ),
     no_preflight: bool = typer.Option(
-        False, "--no-preflight", help="Hide cache preflight section", is_flag=True
+        False, "--no-preflight", help="Hide cache preflight section"
     ),
     no_live: bool = typer.Option(
-        False, "--no-live", help="Hide live fetch status output", is_flag=True
+        False, "--no-live", help="Hide live fetch status output"
     ),
     no_summary: bool = typer.Option(
-        False, "--no-summary", help="Hide total elapsed summary line", is_flag=True
+        False, "--no-summary", help="Hide total elapsed summary line"
     ),
     no_output: bool = typer.Option(
-        False, "--no-output", help="Hide final results output", is_flag=True
+        False, "--no-output", help="Hide final results output"
     ),
     cache_db: str = typer.Option(
         "~/.cache/waybill/waybill.sqlite",
@@ -775,6 +776,23 @@ def sync_items(
     code = run_cache_types(args)
     if code:
         raise typer.Exit(code=code)
+
+
+@app.command("mcp")
+def mcp_serve(
+    cache_db: str = typer.Option(
+        "~/.cache/waybill/waybill.sqlite",
+        "--cache-db",
+        help="SQLite cache database path",
+    ),
+) -> None:
+    """Start an MCP server exposing EVE Online market data tools via stdio.
+
+    Configure in Claude Desktop as:
+    {"command": "waybill", "args": ["mcp"]}
+    """
+    server = create_server(cache_db=cache_db)
+    server.run(transport="stdio")
 
 
 def run_find(args: SimpleNamespace) -> int:

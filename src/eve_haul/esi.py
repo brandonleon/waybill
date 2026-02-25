@@ -552,6 +552,17 @@ class EsiClient:
     def resolve_system_id(self, name: str) -> int:
         return self._resolve_system_id(name)
 
+    def resolve_region_id(self, name: str) -> int:
+        """Resolve a region name to its region_id via ESI."""
+        ids = self._request_json("POST", "/universe/ids/", json_body=[name]).data
+        regions = ids.get("regions") or []
+        if not regions:
+            raise ValueError(
+                f"No region found matching '{name}'. Provide the exact region name"
+                " (e.g. 'The Forge', 'Metropolis', 'Domain')."
+            )
+        return int(regions[0]["id"])
+
     def _station_ref(self, station_id: int) -> StationRef:
         station = self._request_json("GET", f"/universe/stations/{station_id}/").data
         system_id = station["system_id"]
