@@ -354,14 +354,14 @@ def create_server(cache_db: str) -> FastMCP:
             raise ToolError(str(exc)) from exc
 
         try:
-            orders = client.fetch_region_orders(region_id, cache_ttl=market_cache_ttl)
+            orders = client.fetch_item_orders(region_id, type_id, cache_ttl=market_cache_ttl)
         except urllib.error.HTTPError as exc:
             raise ToolError(f"Failed to fetch market orders: {exc}") from exc
         # Player structures have IDs > 1e9 and are not resolvable without auth.
         # Only include NPC station IDs (< 1_000_000_000).
         station_ids = {
             o.location_id for o in orders
-            if o.type_id == type_id and o.location_id < 1_000_000_000
+            if o.location_id < 1_000_000_000
         }
 
         prices_by_station = best_prices_for_item(orders, station_ids, type_id)

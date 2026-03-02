@@ -1078,6 +1078,57 @@ class EsiClient:
         )
         return orders
 
+    def fetch_item_orders(
+        self,
+        region_id: int,
+        type_id: int,
+        cache_ttl: int = 1800,
+    ) -> list[MarketOrder]:
+        """Fetch market orders for a single item type in a region.
+
+        Uses ESI's type_id filter so only orders for that item are downloaded,
+        instead of pulling the entire region order book.
+        """
+        orders: list[MarketOrder] = []
+        page = 1
+        pages = 1
+        ttl_override = cache_ttl if cache_ttl > 0 else None
+
+        def fetch_page(page_num: int) -> HttpResponse:
+            return self._request_json(
+                "GET",
+                f"/markets/{region_id}/orders/",
+                params={"order_type": "all", "type_id": type_id, "page": page_num},
+                ttl_override=ttl_override,
+            )
+
+        def parse_response(response: HttpResponse) -> None:
+            for entry in response.data or []:
+                is_buy = bool(entry.get("is_buy_order"))
+                orders.append(
+                    MarketOrder(
+                        order_id=int(entry["order_id"]),
+                        type_id=entry["type_id"],
+                        location_id=entry["location_id"],
+                        is_buy_order=is_buy,
+                        price=float(entry["price"]),
+                        volume_remain=int(entry["volume_remain"]),
+                        min_volume=int(entry.get("min_volume", 1)),
+                        issued=entry.get("issued"),
+                        order_range=entry.get("range"),
+                        duration=entry.get("duration"),
+                    )
+                )
+
+        first = fetch_page(page)
+        pages = int(first.headers.get("X-Pages", 1)) if first.headers else 1
+        parse_response(first)
+
+        for page_num in range(2, pages + 1):
+            parse_response(fetch_page(page_num))
+
+        return orders
+
     def _store_market_orders(
         self, region_id: int, orders: list[MarketOrder], fetched_at: int
     ) -> None:
